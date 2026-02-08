@@ -166,7 +166,14 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
         console.error(err);
       }
     },
-   extractFromTeamsAttendance(dataArray, name) {
+  extractFromTeamsAttendance(dataArray, name) {
+  const getEmpIdFromEmail = (email) => {
+    if (!email) return null;
+    return email.toLowerCase().endsWith("@hexaware.com")
+      ? email.replace(/@hexaware\.com$/i, "")
+      : email;
+  };
+
   let isEnable = false;
   let result = [];
   let isCheck = false;
@@ -208,19 +215,12 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
           const parts = teams[key].split("\t");
           participant.NAME = parts[0]?.replace(/[0-9/]/g, "");
           participant.DATE = parts[1];
-        } else if (teams[key] && teams[key][1]) {
+        } 
+        else if (teams[key] && teams[key][1]) {
           const extractedData = teams[key][1].split("\t");
           participant.DURATION = extractedData[1];
           participant.EMAIL = extractedData[2] || null;
-
-          // ✅ REQUIRED EMPID LOGIC
-          if (participant.EMAIL) {
-            if (participant.EMAIL.toLowerCase().endsWith("@hexaware.com")) {
-              participant.EMPID = participant.EMAIL.replace(/@hexaware\.com$/i, "");
-            } else {
-              participant.EMPID = participant.EMAIL;
-            }
-          }
+          participant.EMPID = getEmpIdFromEmail(participant.EMAIL);
         }
       }
 
@@ -228,18 +228,11 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
       else {
         if (typeof teams[key] === "string") {
           participant.NAME = teams[key].replace(/[0-9/]/g, "");
-        } else {
+        } 
+        else {
           participant.DURATION = teams[key][2];
           participant.EMAIL = teams[key][3] || null;
-
-          // ✅ REQUIRED EMPID LOGIC
-          if (participant.EMAIL) {
-            if (participant.EMAIL.toLowerCase().endsWith("@hexaware.com")) {
-              participant.EMPID = participant.EMAIL.replace(/@hexaware\.com$/i, "");
-            } else {
-              participant.EMPID = participant.EMAIL;
-            }
-          }
+          participant.EMPID = getEmpIdFromEmail(participant.EMAIL);
         }
       }
 
@@ -257,8 +250,8 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
   }
 
   return result;
-}
-,
+},
+
     setNominationSheet(trainingDetails) {
       let nomination = trainingDetails.trainingParticipant.map(
         (data) => data.participants
