@@ -166,6 +166,7 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
         console.error(err);
       }
     },
+    
   extractFromTeamsAttendance(dataArray, name) {
   const getEmpIdFromEmail = (email) => {
     if (!email) return null;
