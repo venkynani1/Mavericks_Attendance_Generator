@@ -166,19 +166,36 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
         console.error(err);
       }
     },
-   extractFromTeamsAttendance(dataArray, name) {
+  extractFromTeamsAttendance(dataArray, name) {
   let isEnable = false;
   let result = [];
   let isCheck = false;
   let initial = true;
 
   // 🔹 helper: decide EMPID correctly
-  const resolveEmpId = (email) => {
-    if (!email) return null;
-    if (email.includes("@hexaware")) {
+  const resolveEmpId = (email, name) => {
+    // internal user
+    if (email && email.includes("@hexaware")) {
       return Number(email.replace(/\D/g, ""));
     }
-    return email; // external → use email as EMPID
+
+    // external user with email
+    if (email) {
+      return email.toLowerCase();
+    }
+
+    // external / unverified with NO email
+    if (name) {
+      return (
+        name
+          .replace(/\(Unverified\)/i, "")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, ".") + "@external"
+      );
+    }
+
+    return null;
   };
 
   for (let teams of dataArray) {
@@ -215,7 +232,7 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
               const extracted = teams[key][1].split("\t");
               participant.DURATION = extracted[1];
               participant.EMAIL = extracted[2];
-              participant.EMPID = resolveEmpId(extracted[3]);
+              participant.EMPID = resolveEmpId(extracted[3], participant.NAME);
             }
           } 
           // 🔹 Array-based Teams export
@@ -225,17 +242,29 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
             } else {
               participant.DURATION = teams[key][2];
               participant.EMAIL = teams[key][3];
-              participant.EMPID = resolveEmpId(teams[key][4]);
+              participant.EMPID = resolveEmpId(teams[key][4], participant.NAME);
             }
+          }
+
+          // ✅ clean name once (important)
+          if (participant.NAME) {
+            participant.NAME = participant.NAME
+              .replace(/\(Unverified\)/i, "")
+              .trim();
           }
 
           // ✅ push only valid rows
           if (participant.NAME && participant.DURATION) {
-            // fallback: if EMPID missing but EMAIL exists
-            if (!participant.EMPID && participant.EMAIL) {
-              participant.EMPID = participant.EMAIL;
+            // final safety net (should rarely trigger)
+            if (!participant.EMPID) {
+              participant.EMPID = resolveEmpId(
+                participant.EMAIL,
+                participant.NAME
+              );
             }
+
             result.push({ ...participant });
+
             participant = {
               EMPID: null,
               NAME: null,
@@ -252,6 +281,7 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
   console.log("Teams", result);
   return result;
 },
+
 
     setNominationSheet(trainingDetails) {
       let nomination = trainingDetails.trainingParticipant.map(
