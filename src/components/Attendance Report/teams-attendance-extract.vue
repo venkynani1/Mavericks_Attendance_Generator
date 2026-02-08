@@ -168,32 +168,17 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
     },
     
 extractFromTeamsAttendance(dataArray, name) {
-const resolveEmpId = (teamsRow, email) => {
-  const participantId =
-    teamsRow["Participant ID"] ||
-    teamsRow["User ID"] ||
-    teamsRow["Participant Id"] ||
-    null;
+  const resolveEmpId = (email) => {
+    if (!email) return null;
 
-  // 1️⃣ Prefer Participant / User ID from CSV
-  if (participantId) {
-    return String(participantId).trim(); // ✅ TRIM HERE
-  }
+    const cleanEmail = String(email).trim().toLowerCase();
 
-  // 2️⃣ Fallback to email
-  if (email && typeof email === "string") {
-    const cleanEmail = email.trim(); // ✅ TRIM HERE
-
-    if (cleanEmail.toLowerCase().endsWith("@hexaware.com")) {
+    if (cleanEmail.endsWith("@hexaware.com")) {
       return cleanEmail.replace(/@hexaware\.com$/i, "");
     }
 
     return cleanEmail; // external users → full email
-  }
-
-  return null;
-};
-
+  };
 
   let isEnable = false;
   let result = [];
@@ -230,24 +215,28 @@ const resolveEmpId = (teamsRow, email) => {
 
       if (teams[key] === "Name") continue;
 
+      /* ---------- FORMAT 1 ---------- */
       if (!isCheck) {
         if (typeof teams[key] === "string") {
           const parts = teams[key].split("\t");
-          participant.NAME = parts[0]?.replace(/[0-9/]/g, "");
+          participant.NAME = parts[0]?.replace(/[0-9/]/g, "").trim();
           participant.DATE = parts[1];
         } else if (teams[key] && teams[key][1]) {
           const extractedData = teams[key][1].split("\t");
           participant.DURATION = extractedData[1];
           participant.EMAIL = extractedData[2] || null;
-          participant.EMPID = resolveEmpId(teams, participant.EMAIL);
+          participant.EMPID = resolveEmpId(participant.EMAIL);
         }
-      } else {
+      }
+
+      /* ---------- FORMAT 2 ---------- */
+      else {
         if (typeof teams[key] === "string") {
-          participant.NAME = teams[key].replace(/[0-9/]/g, "");
+          participant.NAME = teams[key].replace(/[0-9/]/g, "").trim();
         } else {
           participant.DURATION = teams[key][2];
           participant.EMAIL = teams[key][3] || null;
-          participant.EMPID = resolveEmpId(teams, participant.EMAIL);
+          participant.EMPID = resolveEmpId(participant.EMAIL);
         }
       }
 
@@ -265,7 +254,8 @@ const resolveEmpId = (teamsRow, email) => {
   }
 
   return result;
-},
+}
+,
 
    setNominationSheet(trainingDetails) {
   let nomination = trainingDetails.trainingParticipant.map(
@@ -295,55 +285,66 @@ const resolveEmpId = (teamsRow, email) => {
 },
 
     prepareFinalAttendance(uniqueArray, trainingDetails) {
-      let finalAttendanceSheet = JSON.parse(JSON.stringify(uniqueArray));
-      let delay = this.minDurationStay;
-      let totalSession = trainingDetails.trainingParticipant.length;
-      for (let data of trainingDetails.trainingParticipant) {
-        let wholeData = data.participants;
-        let filteredData = this.filterParticipants(data.participants, delay);
-        let currentDate = data.date;
-        finalAttendanceSheet.forEach((employee) => {
-          const filterEmployee = filteredData.find(
-            (data) => data.EMPID == employee.EMPID
-          );
-          const employeeData = wholeData.find(
-            (data) => data.EMPID == employee.EMPID
-          );
-          if (filterEmployee) {
-            if (!employee.PRESENTCOUNT) {
-              employee.SESSIONCOUNT = totalSession;
-              employee.PRESENTCOUNT = 0;
-            }
-            if (!employee.Attendance) {
-              employee.Duration = {};
-              employee.Attendance = {};
-            }
-            employee.Duration[currentDate] =
-              filterEmployee && filterEmployee.DURATION !== undefined && filterEmployee.DURATION !== null
-                ? filterEmployee.DURATION
-                : "0s";
-            employee.Attendance[currentDate] = "Present";
-            employee.PRESENTCOUNT++;
-          } else {
-            if (!employee.SESSIONCOUNT) {
-              employee.SESSIONCOUNT = totalSession;
-            }
-            if (!employee.Attendance) {
-              employee.Attendance = {};
-              employee.Duration = {};
-            }
-            employee.Duration[currentDate] =
-              employeeData && employeeData.DURATION !== undefined
-                ? employeeData.DURATION
-                : "0s";
-            employee.Attendance[currentDate] = "No Show";
-          }
-        });
+  let finalAttendanceSheet = JSON.parse(JSON.stringify(uniqueArray));
+  let delay = this.minDurationStay;
+  let totalSession = trainingDetails.trainingParticipant.length;
+
+  for (let data of trainingDetails.trainingParticipant) {
+    let wholeData = data.participants;
+    let filteredData = this.filterParticipants(data.participants, delay);
+    let currentDate = data.date;
+
+    finalAttendanceSheet.forEach((employee) => {
+      const filterEmployee = filteredData.find(
+        (data) => data.EMPID === employee.EMPID
+      );
+
+      const employeeData = wholeData.find(
+        (data) => data.EMPID === employee.EMPID
+      );
+
+      if (filterEmployee) {
+        if (!employee.PRESENTCOUNT) {
+          employee.SESSIONCOUNT = totalSession;
+          employee.PRESENTCOUNT = 0;
+        }
+
+        if (!employee.Attendance) {
+          employee.Attendance = {};
+          employee.Duration = {};
+        }
+
+        employee.Duration[currentDate] =
+          filterEmployee.DURATION !== undefined && filterEmployee.DURATION !== null
+            ? filterEmployee.DURATION
+            : "0s";
+
+        employee.Attendance[currentDate] = "Present";
+        employee.PRESENTCOUNT++;
+      } else {
+        if (!employee.SESSIONCOUNT) {
+          employee.SESSIONCOUNT = totalSession;
+        }
+
+        if (!employee.Attendance) {
+          employee.Attendance = {};
+          employee.Duration = {};
+        }
+
+        employee.Duration[currentDate] =
+          employeeData && employeeData.DURATION !== undefined
+            ? employeeData.DURATION
+            : "0s";
+
+        employee.Attendance[currentDate] = "No Show";
       }
- 
-      console.log('prepare',finalAttendanceSheet)
-      return finalAttendanceSheet;
-    },
+    });
+  }
+
+  console.log("prepare", finalAttendanceSheet);
+  return finalAttendanceSheet;
+},
+
     filterParticipants(data, delay = 0) {
      
       console.log("filter",data)
