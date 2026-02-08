@@ -167,19 +167,27 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
       }
     },
     
-extractFromTeamsAttendance(dataArray, name) {
+  extractFromTeamsAttendance(dataArray, name) {
   const resolveEmpId = (email, participantId) => {
-    if (!email) return null;
-
-    const cleanEmail = String(email).trim().toLowerCase();
+    // Normalize participantId early
+    const cleanParticipantId = participantId
+      ? String(participantId).trim()
+      : null;
 
     // Hexaware users → numeric EMP ID from Participant ID column
-    if (cleanEmail.endsWith("@hexaware.com")) {
-      return participantId ? String(participantId).trim() : null;
+    if (email && String(email).toLowerCase().endsWith("@hexaware.com")) {
+      return cleanParticipantId
+        ? cleanParticipantId.split("@")[0]
+        : null;
     }
 
-    // External users → full email as EMPID
-    return cleanEmail;
+    // External users with email → full email
+    if (email) {
+      return String(email).trim().toLowerCase();
+    }
+
+    // Unverified / Guest users → fallback to Participant ID text
+    return cleanParticipantId;
   };
 
   let isEnable = false;
@@ -221,13 +229,14 @@ extractFromTeamsAttendance(dataArray, name) {
       if (!isCheck) {
         if (typeof teams[key] === "string") {
           const parts = teams[key].split("\t");
-          participant.NAME = parts[0]?.replace(/[0-9/]/g, "").trim();
+          participant.NAME = parts[0]
+            ?.replace(/[0-9/]/g, "")
+            .trim();
           participant.DATE = parts[1];
-        } 
-        else if (teams[key] && teams[key][1]) {
+        } else if (teams[key] && teams[key][1]) {
           const extractedData = teams[key][1].split("\t");
 
-          const participantId = extractedData[0]; // 🔑 Participant ID
+          const participantId = extractedData[0]; // Participant ID
           participant.DURATION = extractedData[1];
           participant.EMAIL = extractedData[2] || null;
 
@@ -241,10 +250,11 @@ extractFromTeamsAttendance(dataArray, name) {
       /* ---------- FORMAT 2 ---------- */
       else {
         if (typeof teams[key] === "string") {
-          participant.NAME = teams[key].replace(/[0-9/]/g, "").trim();
-        } 
-        else {
-          const participantId = teams[key][0]; // 🔑 Participant ID
+          participant.NAME = teams[key]
+            .replace(/[0-9/]/g, "")
+            .trim();
+        } else {
+          const participantId = teams[key][0]; // Participant ID
           participant.DURATION = teams[key][2];
           participant.EMAIL = teams[key][3] || null;
 
@@ -270,6 +280,7 @@ extractFromTeamsAttendance(dataArray, name) {
 
   return result;
 },
+
 
 
    setNominationSheet(trainingDetails) {
