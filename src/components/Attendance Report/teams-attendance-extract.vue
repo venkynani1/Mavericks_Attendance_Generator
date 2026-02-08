@@ -168,26 +168,32 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
     },
     
 extractFromTeamsAttendance(dataArray, name) {
-  const resolveEmpId = (teamsRow, email) => {
-    const participantId =
-      teamsRow["Participant ID"] ||
-      teamsRow["User ID"] ||
-      teamsRow["Participant Id"] ||
-      null;
+const resolveEmpId = (teamsRow, email) => {
+  const participantId =
+    teamsRow["Participant ID"] ||
+    teamsRow["User ID"] ||
+    teamsRow["Participant Id"] ||
+    null;
 
-    if (participantId) {
-      return String(participantId);
+  // 1️⃣ Prefer Participant / User ID from CSV
+  if (participantId) {
+    return String(participantId).trim(); // ✅ TRIM HERE
+  }
+
+  // 2️⃣ Fallback to email
+  if (email && typeof email === "string") {
+    const cleanEmail = email.trim(); // ✅ TRIM HERE
+
+    if (cleanEmail.toLowerCase().endsWith("@hexaware.com")) {
+      return cleanEmail.replace(/@hexaware\.com$/i, "");
     }
 
-    if (email && typeof email === "string") {
-      if (email.toLowerCase().endsWith("@hexaware.com")) {
-        return email.replace(/@hexaware\.com$/i, "");
-      }
-      return email;
-    }
+    return cleanEmail; // external users → full email
+  }
 
-    return null;
-  };
+  return null;
+};
+
 
   let isEnable = false;
   let result = [];
@@ -261,26 +267,33 @@ extractFromTeamsAttendance(dataArray, name) {
   return result;
 },
 
-    setNominationSheet(trainingDetails) {
-      let nomination = trainingDetails.trainingParticipant.map(
-        (data) => data.participants
-      );
-      let mergedArray = nomination.flat();
-      const uniqueMap = new Map();
-      mergedArray.forEach((item) => {
-        const key =
-          item.EMPID !== null ? `empid-${item.EMPID}` : `name-${item.NAME}`;
-        if (!uniqueMap.has(key)) {
-          uniqueMap.set(key, item);
-        }
-      });
-      const uniqueArray = Array.from(uniqueMap.values());
-      this.dynamicNomination = uniqueArray.map(({ EMPID, NAME }) => ({
-        EMPID:EMPID,
-        NAME,
-      }));
-      return this.dynamicNomination;
-    },
+   setNominationSheet(trainingDetails) {
+  let nomination = trainingDetails.trainingParticipant.map(
+    (data) => data.participants
+  );
+
+  let mergedArray = nomination.flat();
+  const uniqueMap = new Map();
+
+  mergedArray.forEach((item) => {
+    if (!item.EMPID) return; // 🔒 no NAME fallback
+
+    const key = `empid-${item.EMPID}`;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, item);
+    }
+  });
+
+  const uniqueArray = Array.from(uniqueMap.values());
+
+  this.dynamicNomination = uniqueArray.map(({ EMPID, NAME }) => ({
+    EMPID,
+    NAME,
+  }));
+
+  return this.dynamicNomination;
+},
+
     prepareFinalAttendance(uniqueArray, trainingDetails) {
       let finalAttendanceSheet = JSON.parse(JSON.stringify(uniqueArray));
       let delay = this.minDurationStay;
