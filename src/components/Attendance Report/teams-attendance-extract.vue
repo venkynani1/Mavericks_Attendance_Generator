@@ -166,119 +166,114 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
         console.error(err);
       }
     },
-  extractFromTeamsAttendance(dataArray, name) {
-  let isEnable = false;
-  let result = [];
-  let isCheck = false;
-  let initial = true;
-
-  // 🔹 helper: decide EMPID correctly (FINAL authority)
-  const resolveEmpId = (email, name) => {
-  // internal with email
-  if (email && email.includes("@hexaware")) {
-    return Number(email.replace(/\D/g, ""));
-  }
-
-  // external with email
-  if (email) {
-    return email.toLowerCase();
-  }
-
-  // internal OR external with NO email (fallback from name)
-  if (name) {
-    return (
-      name
-        .replace(/\(Unverified\)/i, "")
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, ".")
-    );
-  }
-
-  return null;
-};
-
-
-  for (let teams of dataArray) {
-    let participant = {
-      EMPID: null,
-      NAME: null,
-      DURATION: null,
-      EMAIL: null,
-      DATE: null,
-    };
-
-    for (let key in teams) {
-      if (teams[key] === "2. Participants") {
-        isEnable = true;
-        continue;
-      }
-
-      if (teams[key] === null) isEnable = false;
-
-      if (isEnable) {
-        if (initial) {
-          isCheck = teams[key]?.length > 2;
-          initial = false;
-        }
-
-        if (teams[key] && teams[key] !== "Name") {
-          // 🔹 CSV (tab separated)
-          if (!isCheck) {
-            if (typeof teams[key] === "string") {
-              const parts = teams[key].split("\t");
-              participant.NAME = parts[0]?.replace(/[0-9/]/g, "").trim();
-              participant.DATE = parts[1];
-            } else if (teams[key][1]) {
-              const extracted = teams[key][1].split("\t");
-              participant.DURATION = extracted[1];
-              participant.EMAIL = extracted[2];
-            }
+    extractFromTeamsAttendance(dataArray,name) {
+      let isEnable = false;
+      let result = [];
+      let isCheck = false
+      let initial = true;
+      for (let teams of dataArray) {
+        let participant = {
+          EMPID: null,
+          NAME: null,
+          DURATION: null,
+          EMAIL: null,
+          DATE: null,
+        };
+        for (let key in teams) {
+          if (teams[key] == "2. Participants") {
+            isEnable = true;
+            continue;
           }
-          // 🔹 Array-based Teams export
-          else {
-            if (typeof teams[key] === "string") {
-              participant.NAME = teams[key].replace(/[0-9/]/g, "").trim();
-            } else {
+          if (teams[key] === null) isEnable = false;
+          if (isEnable) {
+            if(initial){
+              isCheck = teams[key].length > 2
+            }
+            console.log("key",key,teams[key])
+            console.log("name",name)
+            if(true){
+             
+              console.log("true",teams[key])
+              if(teams[key] && teams[key] !== "Name"){
+                if(!isCheck){
+ 
+                          if (typeof teams[key] === "string"){
+                              participant.NAME = teams[key].split("\t")[0].replace(/[0-9/]/g, '');
+                              participant.DATE = teams[key].split("\t")[1]
+                              continue
+                            }else{
+                              console.log("stuck",teams[key][1])
+                              if(teams[key][1]){
+                              let extractedData = teams[key][1].split("\t")
+ 
+                              participant.DURATION = extractedData[1]
+                              participant.EMAIL = extractedData[2]
+                              if (extractedData[3] && extractedData[3].includes("@hexaware"))
+                                  participant.EMPID = Number(extractedData[3].replace(/\D/g, ""));
+                              else
+                                  participant.EMPID = participant.NAME;
+                              }
+                            }
+                            }
+                            else{
+                              if (typeof teams[key] === "string"){
+                                 participant.NAME = teams[key].replace(/[0-9/]/g, '')
+                              }
+                              else{
+                                participant.DURATION = teams[key][2]
+                                participant.EMAIL = teams[key][3]
+                                  if (teams[key][4] && teams[key][4].includes("@hexaware"))
+                                    participant.EMPID = Number(teams[key][4].replace(/\D/g, ""));
+                                  else
+                                    participant.EMPID = participant.NAME;
+                              }
+                              }
+                             
+                            }
+                if(participant.NAME && participant.DURATION){
+                  result.push(participant);
+                }
+              }
+           
+            else{
+              console.log("false")
+            if (
+              teams[key] === "Name" ||
+              (teams[key] &&
+                teams[key].length > 0 &&
+                teams[key][0] === "First Join")
+            )
+              continue;
+            if (typeof teams[key] === "string" && teams[key] !== "Name")
+              participant.NAME = teams[key];
+            if (
+              typeof teams[key] !== "string" &&
+              teams[key] &&
+              teams[key].length > 0 &&
+              teams[key][0] !== "First Join"
+            ) {
+              participant.DATE = teams[key][0].split(",")[0];
               participant.DURATION = teams[key][2];
               participant.EMAIL = teams[key][3];
+              if (teams[key][4] && teams[key][4].includes("@hexaware"))
+                participant.EMPID = Number(teams[key][4].replace(/\D/g, ""));
+              else {
+                // console.log("participants",participant.NAME)
+                participant.EMPID = participant.NAME;
+              }
+ 
+              result.push(participant);
             }
+           
           }
-
-          // ✅ push only when row is complete
-          if (participant.NAME && participant.DURATION) {
-            // clean name
-            participant.NAME = participant.NAME
-              .replace(/\(Unverified\)/i, "")
-              .trim();
-
-            // FINAL, SINGLE place where EMPID is decided
-            participant.EMPID = resolveEmpId(
-              participant.EMAIL,
-              participant.NAME
-            );
-
-            result.push({ ...participant });
-
-            participant = {
-              EMPID: null,
-              NAME: null,
-              DURATION: null,
-              EMAIL: null,
-              DATE: null,
-            };
+         
+         
           }
         }
       }
-    }
-  }
-
-  console.log("Teams Parsed Result");
-  console.table(result);
-  return result;
-},
-
-
+      console.log('Teams',result)
+      return result;
+    },
     setNominationSheet(trainingDetails) {
       let nomination = trainingDetails.trainingParticipant.map(
         (data) => data.participants
