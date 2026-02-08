@@ -166,208 +166,184 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
         console.error(err);
       }
     },
-    
- extractFromTeamsAttendance(dataArray, name) {
-  const resolveEmpId = (email, participantId) => {
-    const cleanParticipantId = participantId
-      ? String(participantId).trim()
-      : null;
-
-    // Hexaware users → numeric EMPID from email
-    if (email && String(email).toLowerCase().endsWith("@hexaware.com")) {
-      return String(email).trim().toLowerCase().split("@")[0];
-    }
-
-    // External users with email → full email
-    if (email) {
-      return String(email).trim().toLowerCase();
-    }
-
-    // Unverified / Guest users → fallback to participantId text
-    return cleanParticipantId;
-  };
-
-  let isEnable = false;
-  let result = [];
-  let isCheck = false;
-  let initial = true;
-
-  for (let teams of dataArray) {
-    let participant = {
-      EMPID: null,
-      NAME: null,
-      DURATION: null,
-      EMAIL: null,
-      DATE: null,
-    };
-
-    for (let key in teams) {
-      if (teams[key] === "2. Participants") {
-        isEnable = true;
-        continue;
-      }
-
-      if (teams[key] === null) {
-        isEnable = false;
-        initial = true;
-        continue;
-      }
-
-      if (!isEnable) continue;
-
-      if (initial) {
-        isCheck = teams[key] && teams[key].length > 2;
-        initial = false;
-      }
-
-      if (teams[key] === "Name") continue;
-
-      /* ---------- FORMAT 1 ---------- */
-      if (!isCheck) {
-        if (typeof teams[key] === "string") {
-          const parts = teams[key].split("\t");
-          participant.NAME = parts[0]
-            ?.replace(/[0-9/]/g, "")
-            .trim();
-          participant.DATE = parts[1];
-        } else if (teams[key] && teams[key][1]) {
-          const extractedData = teams[key][1].split("\t");
-
-          const participantId = extractedData[0]; // fallback only
-          participant.DURATION = extractedData[1];
-          participant.EMAIL = extractedData[2] || null;
-
-          participant.EMPID = resolveEmpId(
-            participant.EMAIL,
-            participantId
-          );
-        }
-      }
-
-      /* ---------- FORMAT 2 ---------- */
-      else {
-        if (typeof teams[key] === "string") {
-          participant.NAME = teams[key]
-            .replace(/[0-9/]/g, "")
-            .trim();
-        } else {
-          const participantId = teams[key][0]; // fallback only
-          participant.DURATION = teams[key][2];
-          participant.EMAIL = teams[key][3] || null;
-
-          participant.EMPID = resolveEmpId(
-            participant.EMAIL,
-            participantId
-          );
-        }
-      }
-
-      if (participant.NAME && participant.DURATION) {
-        result.push({ ...participant });
-        participant = {
+    extractFromTeamsAttendance(dataArray,name) {
+      let isEnable = false;
+      let result = [];
+      let isCheck = false
+      let initial = true;
+      for (let teams of dataArray) {
+        let participant = {
           EMPID: null,
           NAME: null,
           DURATION: null,
           EMAIL: null,
           DATE: null,
         };
+        for (let key in teams) {
+          if (teams[key] == "2. Participants") {
+            isEnable = true;
+            continue;
+          }
+          if (teams[key] === null) isEnable = false;
+          if (isEnable) {
+            if(initial){
+              isCheck = teams[key].length > 2
+            }
+            console.log("key",key,teams[key])
+            console.log("name",name)
+            if(true){
+             
+              console.log("true",teams[key])
+              if(teams[key] && teams[key] !== "Name"){
+                if(!isCheck){
+ 
+                          if (typeof teams[key] === "string"){
+                              participant.NAME = teams[key].split("\t")[0].replace(/[0-9/]/g, '');
+                              participant.DATE = teams[key].split("\t")[1]
+                              continue
+                            }else{
+                              console.log("stuck",teams[key][1])
+                              if(teams[key][1]){
+                              let extractedData = teams[key][1].split("\t")
+ 
+                              participant.DURATION = extractedData[1]
+                              participant.EMAIL = extractedData[2]
+                              if (extractedData[3] && extractedData[3].includes("@hexaware"))
+                                  participant.EMPID = Number(extractedData[3].replace(/\D/g, ""));
+                              else
+                                  participant.EMPID = participant.NAME;
+                              }
+                            }
+                            }
+                            else{
+                              if (typeof teams[key] === "string"){
+                                 participant.NAME = teams[key].replace(/[0-9/]/g, '')
+                              }
+                              else{
+                                participant.DURATION = teams[key][2]
+                                participant.EMAIL = teams[key][3]
+                                  if (teams[key][4] && teams[key][4].includes("@hexaware"))
+                                    participant.EMPID = Number(teams[key][4].replace(/\D/g, ""));
+                                  else
+                                    participant.EMPID = participant.NAME;
+                              }
+                              }
+                             
+                            }
+                if(participant.NAME && participant.DURATION){
+                  result.push(participant);
+                }
+              }
+           
+            else{
+              console.log("false")
+            if (
+              teams[key] === "Name" ||
+              (teams[key] &&
+                teams[key].length > 0 &&
+                teams[key][0] === "First Join")
+            )
+              continue;
+            if (typeof teams[key] === "string" && teams[key] !== "Name")
+              participant.NAME = teams[key];
+            if (
+              typeof teams[key] !== "string" &&
+              teams[key] &&
+              teams[key].length > 0 &&
+              teams[key][0] !== "First Join"
+            ) {
+              participant.DATE = teams[key][0].split(",")[0];
+              participant.DURATION = teams[key][2];
+              participant.EMAIL = teams[key][3];
+              if (teams[key][4] && teams[key][4].includes("@hexaware"))
+                participant.EMPID = Number(teams[key][4].replace(/\D/g, ""));
+              else {
+                // console.log("participants",participant.NAME)
+                participant.EMPID = participant.NAME;
+              }
+ 
+              result.push(participant);
+            }
+           
+          }
+         
+         
+          }
+        }
       }
-    }
-  }
-
-  return result;
-},
-
-
-
-   setNominationSheet(trainingDetails) {
-  let nomination = trainingDetails.trainingParticipant.map(
-    (data) => data.participants
-  );
-
-  let mergedArray = nomination.flat();
-  const uniqueMap = new Map();
-
-  mergedArray.forEach((item) => {
-    if (!item.EMPID) return; // 🔒 no NAME fallback
-
-    const key = `empid-${item.EMPID}`;
-    if (!uniqueMap.has(key)) {
-      uniqueMap.set(key, item);
-    }
-  });
-
-  const uniqueArray = Array.from(uniqueMap.values());
-
-  this.dynamicNomination = uniqueArray.map(({ EMPID, NAME }) => ({
-    EMPID,
-    NAME,
-  }));
-
-  return this.dynamicNomination;
-},
-
+      console.log('Teams',result)
+      return result;
+    },
+    setNominationSheet(trainingDetails) {
+      let nomination = trainingDetails.trainingParticipant.map(
+        (data) => data.participants
+      );
+      let mergedArray = nomination.flat();
+      const uniqueMap = new Map();
+      mergedArray.forEach((item) => {
+        const key =
+          item.EMPID !== null ? `empid-${item.EMPID}` : `name-${item.NAME}`;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, item);
+        }
+      });
+      const uniqueArray = Array.from(uniqueMap.values());
+      this.dynamicNomination = uniqueArray.map(({ EMPID, NAME }) => ({
+        EMPID:EMPID,
+        NAME,
+      }));
+      return this.dynamicNomination;
+    },
     prepareFinalAttendance(uniqueArray, trainingDetails) {
-  let finalAttendanceSheet = JSON.parse(JSON.stringify(uniqueArray));
-  let delay = this.minDurationStay;
-  let totalSession = trainingDetails.trainingParticipant.length;
-
-  for (let data of trainingDetails.trainingParticipant) {
-    let wholeData = data.participants;
-    let filteredData = this.filterParticipants(data.participants, delay);
-    let currentDate = data.date;
-
-    finalAttendanceSheet.forEach((employee) => {
-      const filterEmployee = filteredData.find(
-        (data) => data.EMPID === employee.EMPID
-      );
-
-      const employeeData = wholeData.find(
-        (data) => data.EMPID === employee.EMPID
-      );
-
-      if (filterEmployee) {
-        if (!employee.PRESENTCOUNT) {
-          employee.SESSIONCOUNT = totalSession;
-          employee.PRESENTCOUNT = 0;
-        }
-
-        if (!employee.Attendance) {
-          employee.Attendance = {};
-          employee.Duration = {};
-        }
-
-        employee.Duration[currentDate] =
-          filterEmployee.DURATION !== undefined && filterEmployee.DURATION !== null
-            ? filterEmployee.DURATION
-            : "0s";
-
-        employee.Attendance[currentDate] = "Present";
-        employee.PRESENTCOUNT++;
-      } else {
-        if (!employee.SESSIONCOUNT) {
-          employee.SESSIONCOUNT = totalSession;
-        }
-
-        if (!employee.Attendance) {
-          employee.Attendance = {};
-          employee.Duration = {};
-        }
-
-        employee.Duration[currentDate] =
-          employeeData && employeeData.DURATION !== undefined
-            ? employeeData.DURATION
-            : "0s";
-
-        employee.Attendance[currentDate] = "No Show";
+      let finalAttendanceSheet = JSON.parse(JSON.stringify(uniqueArray));
+      let delay = this.minDurationStay;
+      let totalSession = trainingDetails.trainingParticipant.length;
+      for (let data of trainingDetails.trainingParticipant) {
+        let wholeData = data.participants;
+        let filteredData = this.filterParticipants(data.participants, delay);
+        let currentDate = data.date;
+        finalAttendanceSheet.forEach((employee) => {
+          const filterEmployee = filteredData.find(
+            (data) => data.EMPID == employee.EMPID
+          );
+          const employeeData = wholeData.find(
+            (data) => data.EMPID == employee.EMPID
+          );
+          if (filterEmployee) {
+            if (!employee.PRESENTCOUNT) {
+              employee.SESSIONCOUNT = totalSession;
+              employee.PRESENTCOUNT = 0;
+            }
+            if (!employee.Attendance) {
+              employee.Duration = {};
+              employee.Attendance = {};
+            }
+            employee.Duration[currentDate] =
+              filterEmployee && filterEmployee.DURATION !== undefined && filterEmployee.DURATION !== null
+                ? filterEmployee.DURATION
+                : "0s";
+            employee.Attendance[currentDate] = "Present";
+            employee.PRESENTCOUNT++;
+          } else {
+            if (!employee.SESSIONCOUNT) {
+              employee.SESSIONCOUNT = totalSession;
+            }
+            if (!employee.Attendance) {
+              employee.Attendance = {};
+              employee.Duration = {};
+            }
+            employee.Duration[currentDate] =
+              employeeData && employeeData.DURATION !== undefined
+                ? employeeData.DURATION
+                : "0s";
+            employee.Attendance[currentDate] = "No Show";
+          }
+        });
       }
-    });
-  }
-
-  console.log("prepare", finalAttendanceSheet);
-  return finalAttendanceSheet;
-},
-
+ 
+      console.log('prepare',finalAttendanceSheet)
+      return finalAttendanceSheet;
+    },
     filterParticipants(data, delay = 0) {
      
       console.log("filter",data)
