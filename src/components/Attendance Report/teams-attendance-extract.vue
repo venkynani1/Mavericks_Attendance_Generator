@@ -168,16 +168,18 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
     },
     
 extractFromTeamsAttendance(dataArray, name) {
-  const resolveEmpId = (email) => {
+  const resolveEmpId = (email, participantId) => {
     if (!email) return null;
 
     const cleanEmail = String(email).trim().toLowerCase();
 
+    // Hexaware users → numeric EMP ID from Participant ID column
     if (cleanEmail.endsWith("@hexaware.com")) {
-      return cleanEmail.replace(/@hexaware\.com$/i, "");
+      return participantId ? String(participantId).trim() : null;
     }
 
-    return cleanEmail; // external users → full email
+    // External users → full email as EMPID
+    return cleanEmail;
   };
 
   let isEnable = false;
@@ -221,11 +223,18 @@ extractFromTeamsAttendance(dataArray, name) {
           const parts = teams[key].split("\t");
           participant.NAME = parts[0]?.replace(/[0-9/]/g, "").trim();
           participant.DATE = parts[1];
-        } else if (teams[key] && teams[key][1]) {
+        } 
+        else if (teams[key] && teams[key][1]) {
           const extractedData = teams[key][1].split("\t");
+
+          const participantId = extractedData[0]; // 🔑 Participant ID
           participant.DURATION = extractedData[1];
           participant.EMAIL = extractedData[2] || null;
-          participant.EMPID = resolveEmpId(participant.EMAIL);
+
+          participant.EMPID = resolveEmpId(
+            participant.EMAIL,
+            participantId
+          );
         }
       }
 
@@ -233,10 +242,16 @@ extractFromTeamsAttendance(dataArray, name) {
       else {
         if (typeof teams[key] === "string") {
           participant.NAME = teams[key].replace(/[0-9/]/g, "").trim();
-        } else {
+        } 
+        else {
+          const participantId = teams[key][0]; // 🔑 Participant ID
           participant.DURATION = teams[key][2];
           participant.EMAIL = teams[key][3] || null;
-          participant.EMPID = resolveEmpId(participant.EMAIL);
+
+          participant.EMPID = resolveEmpId(
+            participant.EMAIL,
+            participantId
+          );
         }
       }
 
@@ -254,8 +269,8 @@ extractFromTeamsAttendance(dataArray, name) {
   }
 
   return result;
-}
-,
+},
+
 
    setNominationSheet(trainingDetails) {
   let nomination = trainingDetails.trainingParticipant.map(
