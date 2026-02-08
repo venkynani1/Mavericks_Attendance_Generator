@@ -167,18 +167,15 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
       }
     },
     
-  extractFromTeamsAttendance(dataArray, name) {
+ extractFromTeamsAttendance(dataArray, name) {
   const resolveEmpId = (email, participantId) => {
-    // Normalize participantId early
     const cleanParticipantId = participantId
       ? String(participantId).trim()
       : null;
 
-    // Hexaware users → numeric EMP ID from Participant ID column
+    // Hexaware users → numeric EMPID from email
     if (email && String(email).toLowerCase().endsWith("@hexaware.com")) {
-      return cleanParticipantId
-        ? cleanParticipantId.split("@")[0]
-        : null;
+      return String(email).trim().toLowerCase().split("@")[0];
     }
 
     // External users with email → full email
@@ -186,7 +183,7 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
       return String(email).trim().toLowerCase();
     }
 
-    // Unverified / Guest users → fallback to Participant ID text
+    // Unverified / Guest users → fallback to participantId text
     return cleanParticipantId;
   };
 
@@ -236,7 +233,7 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
         } else if (teams[key] && teams[key][1]) {
           const extractedData = teams[key][1].split("\t");
 
-          const participantId = extractedData[0]; // Participant ID
+          const participantId = extractedData[0]; // fallback only
           participant.DURATION = extractedData[1];
           participant.EMAIL = extractedData[2] || null;
 
@@ -254,7 +251,7 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
             .replace(/[0-9/]/g, "")
             .trim();
         } else {
-          const participantId = teams[key][0]; // Participant ID
+          const participantId = teams[key][0]; // fallback only
           participant.DURATION = teams[key][2];
           participant.EMAIL = teams[key][3] || null;
 
