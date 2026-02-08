@@ -167,12 +167,30 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
       }
     },
     
-  extractFromTeamsAttendance(dataArray, name) {
-  const getEmpIdFromEmail = (email) => {
-    if (!email) return null;
-    return email.toLowerCase().endsWith("@hexaware.com")
-      ? email.replace(/@hexaware\.com$/i, "")
-      : email;
+ extractFromTeamsAttendance(dataArray, name) {
+
+  // 🔐 Single source of truth for EMPID
+  const resolveEmpId = (teamsRow, email) => {
+    const participantId =
+      teamsRow["Participant ID"] ||
+      teamsRow["User ID"] ||
+      teamsRow["Participant Id"] || // safety for header variations
+      null;
+
+    // 1️⃣ Prefer Participant/User ID from CSV
+    if (participantId) {
+      return String(participantId);
+    }
+
+    // 2️⃣ Fallback to email logic
+    if (email && typeof email === "string") {
+      if (email.toLowerCase().endsWith("@hexaware.com")) {
+        return email.replace(/@hexaware\.com$/i, "");
+      }
+      return email; // external users
+    }
+
+    return null;
   };
 
   let isEnable = false;
@@ -221,7 +239,7 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
           const extractedData = teams[key][1].split("\t");
           participant.DURATION = extractedData[1];
           participant.EMAIL = extractedData[2] || null;
-          participant.EMPID = getEmpIdFromEmail(participant.EMAIL);
+          participant.EMPID = resolveEmpId(teams, participant.EMAIL);
         }
       }
 
@@ -233,7 +251,7 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
         else {
           participant.DURATION = teams[key][2];
           participant.EMAIL = teams[key][3] || null;
-          participant.EMPID = getEmpIdFromEmail(participant.EMAIL);
+          participant.EMPID = resolveEmpId(teams, participant.EMAIL);
         }
       }
 
@@ -251,7 +269,7 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
   }
 
   return result;
-},
+}
 
     setNominationSheet(trainingDetails) {
       let nomination = trainingDetails.trainingParticipant.map(
