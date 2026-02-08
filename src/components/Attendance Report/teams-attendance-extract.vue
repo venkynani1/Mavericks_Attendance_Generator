@@ -167,27 +167,23 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
       }
     },
     
- extractFromTeamsAttendance(dataArray, name) {
-
-  // 🔐 Single source of truth for EMPID
+extractFromTeamsAttendance(dataArray, name) {
   const resolveEmpId = (teamsRow, email) => {
     const participantId =
       teamsRow["Participant ID"] ||
       teamsRow["User ID"] ||
-      teamsRow["Participant Id"] || // safety for header variations
+      teamsRow["Participant Id"] ||
       null;
 
-    // 1️⃣ Prefer Participant/User ID from CSV
     if (participantId) {
       return String(participantId);
     }
 
-    // 2️⃣ Fallback to email logic
     if (email && typeof email === "string") {
       if (email.toLowerCase().endsWith("@hexaware.com")) {
         return email.replace(/@hexaware\.com$/i, "");
       }
-      return email; // external users
+      return email;
     }
 
     return null;
@@ -228,27 +224,21 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
 
       if (teams[key] === "Name") continue;
 
-      /* ---------- FORMAT 1 ---------- */
       if (!isCheck) {
         if (typeof teams[key] === "string") {
           const parts = teams[key].split("\t");
           participant.NAME = parts[0]?.replace(/[0-9/]/g, "");
           participant.DATE = parts[1];
-        } 
-        else if (teams[key] && teams[key][1]) {
+        } else if (teams[key] && teams[key][1]) {
           const extractedData = teams[key][1].split("\t");
           participant.DURATION = extractedData[1];
           participant.EMAIL = extractedData[2] || null;
           participant.EMPID = resolveEmpId(teams, participant.EMAIL);
         }
-      }
-
-      /* ---------- FORMAT 2 ---------- */
-      else {
+      } else {
         if (typeof teams[key] === "string") {
           participant.NAME = teams[key].replace(/[0-9/]/g, "");
-        } 
-        else {
+        } else {
           participant.DURATION = teams[key][2];
           participant.EMAIL = teams[key][3] || null;
           participant.EMPID = resolveEmpId(teams, participant.EMAIL);
@@ -269,8 +259,8 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
   }
 
   return result;
-}
-,
+},
+
     setNominationSheet(trainingDetails) {
       let nomination = trainingDetails.trainingParticipant.map(
         (data) => data.participants
