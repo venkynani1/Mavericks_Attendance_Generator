@@ -174,29 +174,30 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
 
   // 🔹 helper: decide EMPID correctly (FINAL authority)
   const resolveEmpId = (email, name) => {
-    // internal
-    if (email && email.includes("@hexaware")) {
-      return Number(email.replace(/\D/g, ""));
-    }
+  // internal with email
+  if (email && email.includes("@hexaware")) {
+    return Number(email.replace(/\D/g, ""));
+  }
 
-    // external with email
-    if (email) {
-      return email.toLowerCase();
-    }
+  // external with email
+  if (email) {
+    return email.toLowerCase();
+  }
 
-    // unverified / no email
-    if (name) {
-      return (
-        name
-          .replace(/\(Unverified\)/i, "")
-          .trim()
-          .toLowerCase()
-          .replace(/\s+/g, ".") + "@external"
-      );
-    }
+  // internal OR external with NO email (fallback from name)
+  if (name) {
+    return (
+      name
+        .replace(/\(Unverified\)/i, "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ".")
+    );
+  }
 
-    return null;
-  };
+  return null;
+};
+
 
   for (let teams of dataArray) {
     let participant = {
