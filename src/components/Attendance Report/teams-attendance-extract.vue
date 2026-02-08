@@ -172,19 +172,19 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
   let isCheck = false;
   let initial = true;
 
-  // 🔹 helper: decide EMPID correctly
+  // 🔹 helper: decide EMPID correctly (FINAL authority)
   const resolveEmpId = (email, name) => {
-    // internal user
+    // internal
     if (email && email.includes("@hexaware")) {
       return Number(email.replace(/\D/g, ""));
     }
 
-    // external user with email
+    // external with email
     if (email) {
       return email.toLowerCase();
     }
 
-    // external / unverified with NO email
+    // unverified / no email
     if (name) {
       return (
         name
@@ -222,7 +222,7 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
         }
 
         if (teams[key] && teams[key] !== "Name") {
-          // 🔹 CSV format with tab-separated values
+          // 🔹 CSV (tab separated)
           if (!isCheck) {
             if (typeof teams[key] === "string") {
               const parts = teams[key].split("\t");
@@ -232,9 +232,8 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
               const extracted = teams[key][1].split("\t");
               participant.DURATION = extracted[1];
               participant.EMAIL = extracted[2];
-              participant.EMPID = resolveEmpId(extracted[3], participant.NAME);
             }
-          } 
+          }
           // 🔹 Array-based Teams export
           else {
             if (typeof teams[key] === "string") {
@@ -242,26 +241,21 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
             } else {
               participant.DURATION = teams[key][2];
               participant.EMAIL = teams[key][3];
-              participant.EMPID = resolveEmpId(teams[key][4], participant.NAME);
             }
           }
 
-          // ✅ clean name once (important)
-          if (participant.NAME) {
+          // ✅ push only when row is complete
+          if (participant.NAME && participant.DURATION) {
+            // clean name
             participant.NAME = participant.NAME
               .replace(/\(Unverified\)/i, "")
               .trim();
-          }
 
-          // ✅ push only valid rows
-          if (participant.NAME && participant.DURATION) {
-            // final safety net (should rarely trigger)
-            if (!participant.EMPID) {
-              participant.EMPID = resolveEmpId(
-                participant.EMAIL,
-                participant.NAME
-              );
-            }
+            // FINAL, SINGLE place where EMPID is decided
+            participant.EMPID = resolveEmpId(
+              participant.EMAIL,
+              participant.NAME
+            );
 
             result.push({ ...participant });
 
@@ -278,7 +272,8 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
     }
   }
 
-  console.log("Teams", result);
+  console.log("Teams Parsed Result");
+  console.table(result);
   return result;
 },
 
