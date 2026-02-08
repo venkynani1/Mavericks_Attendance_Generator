@@ -270,7 +270,7 @@ console.log("final",this.finalAttendanceWithNomination.filter((employee)=>((empl
 
   return result;
 }
-
+,
     setNominationSheet(trainingDetails) {
       let nomination = trainingDetails.trainingParticipant.map(
         (data) => data.participants
